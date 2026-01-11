@@ -612,6 +612,27 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
+					if map.woocommerce_field_name in ("$.status", "status") and not isinstance(
+						erpnext_item_field_value, str
+					):
+						frappe.logger("woocommerce_fusion").warning(
+							(
+								"Skipping invalid status mapping value for item sync: "
+								f"{erpnext_item_field_value!r} (Item {item.item.name})"
+							)
+						)
+						continue
+					if map.woocommerce_field_name in ("$.categories", "categories") and not (
+						isinstance(erpnext_item_field_value, list)
+						and all(isinstance(entry, dict) for entry in erpnext_item_field_value)
+					):
+						frappe.logger("woocommerce_fusion").warning(
+							(
+								"Skipping invalid categories mapping value for item sync: "
+								f"{erpnext_item_field_value!r} (Item {item.item.name})"
+							)
+						)
+						continue
 					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
 					if meta_key:
 						current_value = get_meta_value(
