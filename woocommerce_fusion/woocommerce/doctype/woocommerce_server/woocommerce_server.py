@@ -121,6 +121,9 @@ class WooCommerceServer(Document):
 						)
 					)
 
+				if jsonpath_expr in ("$.name", "name"):
+					frappe.throw(_("JSONPath '{0}' is not allowed for item field mapping").format(jsonpath_expr))
+
 	def validate_reserved_stock_setting(self):
 		"""
 		If 'Reserved Stock Adjustment' is enabled, make sure that 'Reserve Stock' in ERPNext is enabled

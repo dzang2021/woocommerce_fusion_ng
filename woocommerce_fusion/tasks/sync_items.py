@@ -604,6 +604,14 @@ class SynchroniseItem(SynchroniseWooCommerce):
 				for map in wc_server.item_field_map:
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
 					erpnext_item_field_value = getattr(item.item, erpnext_item_field_name[0])
+					if map.woocommerce_field_name in ("$.name", "name"):
+						frappe.logger("woocommerce_fusion").warning(
+							(
+								"Skipping unsafe WooCommerce field mapping: "
+								f"{map.woocommerce_field_name} (Item {item.item.name})"
+							)
+						)
+						continue
 					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
 					if meta_key:
 						current_value = get_meta_value(
