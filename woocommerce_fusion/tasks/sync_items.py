@@ -352,6 +352,22 @@ class SynchroniseItem(SynchroniseWooCommerce):
 		if product_fields_changed:
 			wc_product_dirty = True
 
+		if not isinstance(wc_product.status, str):
+			wc_product.status = "draft" if item.item.disabled else "publish"
+			wc_product_dirty = True
+
+		categories_value = wc_product.categories
+		if isinstance(categories_value, str):
+			try:
+				categories_value = json.loads(categories_value)
+			except json.JSONDecodeError:
+				pass
+		if isinstance(categories_value, str):
+			category_name = cstr(item.item.item_group).strip()
+			if category_name:
+				wc_product.categories = [{"name": category_name, "slug": scrub(category_name)}]
+				wc_product_dirty = True
+
 		if wc_product_dirty:
 			wc_product.save()
 
