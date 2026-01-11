@@ -563,26 +563,26 @@ class SynchroniseItem(SynchroniseWooCommerce):
 			wc_server = frappe.get_cached_doc(
 				"WooCommerce Server", self.woocommerce_product.woocommerce_server
 			)
-				if wc_server.item_field_map:
-					woocommerce_product_dict = (
-						self.woocommerce_product.deserialize_attributes_of_type_dict_or_list(
-							self.woocommerce_product.to_dict()
-						)
+			if wc_server.item_field_map:
+				woocommerce_product_dict = (
+					self.woocommerce_product.deserialize_attributes_of_type_dict_or_list(
+						self.woocommerce_product.to_dict()
 					)
-					for map in wc_server.item_field_map:
-						erpnext_item_field_name = map.erpnext_field_name.split(" | ")
-						meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
-						if meta_key:
-							value = get_meta_value(woocommerce_product_dict.get("meta_data"), meta_key)
-							if value is not None:
-								setattr(item, erpnext_item_field_name[0], value)
-								item_dirty = True
-							continue
-						if map.woocommerce_field_name == "$.safety_instructions":
-							value = get_meta_value(
-								woocommerce_product_dict.get("meta_data"), "_safety_instructions"
-							)
-							if value:
+				)
+				for map in wc_server.item_field_map:
+					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
+					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
+					if meta_key:
+						value = get_meta_value(woocommerce_product_dict.get("meta_data"), meta_key)
+						if value is not None:
+							setattr(item, erpnext_item_field_name[0], value)
+							item_dirty = True
+						continue
+					if map.woocommerce_field_name == "$.safety_instructions":
+						value = get_meta_value(
+							woocommerce_product_dict.get("meta_data"), "_safety_instructions"
+						)
+						if value:
 							setattr(item, erpnext_item_field_name[0], value)
 							item_dirty = True
 						continue
@@ -708,16 +708,6 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
-						if woocommerce_product.name:
-							# We're strict about existing WooCommerce Products, the field should exist
-							raise ValueError(
-								_("Field <code>{0}</code> not found in WooCommerce Product {1}").format(
-									map.woocommerce_field_name, woocommerce_product.name
-								)
-							)
-						else:
-							# For new WooCommerce Products, the nested field may not exist yet, so don't stop the sync
-							continue
 
 					# JSONPath parsing typically returns a list, we'll only take the first value
 					woocommerce_product_field_value = woocommerce_product_field_matches[0].value

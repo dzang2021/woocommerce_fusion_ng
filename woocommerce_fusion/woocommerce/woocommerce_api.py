@@ -1,4 +1,5 @@
 import json
+from frappe.utils.data import scrub
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -335,6 +336,23 @@ class WooCommerceResource(Document):
 		record = self.deserialize_attributes_of_type_dict_or_list(record_data)
 
 		record = self.before_db_update(record)
+
+		# Normalize types for common fields WooCommerce expects
+		if "status" in record and not isinstance(record["status"], str):
+			record["status"] = "draft" if record["status"] else "publish"
+
+		if "categories" in record:
+			categories_value = record["categories"]
+			if isinstance(categories_value, str):
+				try:
+					categories_value = json.loads(categories_value)
+				except json.JSONDecodeError:
+					pass
+			if isinstance(categories_value, list) and categories_value and isinstance(categories_value[0], str):
+				categories_value = [{"name": entry, "slug": scrub(entry)} for entry in categories_value]
+			if isinstance(categories_value, str):
+				categories_value = [{"name": categories_value, "slug": scrub(categories_value)}]
+			record["categories"] = categories_value
 
 		# Drop fields with values that are unchanged
 		record_data_before_save = self._doc_before_save.to_dict()
