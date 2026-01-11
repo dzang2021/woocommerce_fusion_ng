@@ -710,6 +710,22 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						jsonpath_expr.update(wc_product_with_deserialised_fields, erpnext_item_field_value)
 						wc_product_dirty = True
 
+				# Normalize common fields to WooCommerce expected types
+				if not isinstance(wc_product_with_deserialised_fields.get("status"), str):
+					status_value = "draft" if item.item.disabled else "publish"
+					if wc_product_with_deserialised_fields.get("status") != status_value:
+						wc_product_with_deserialised_fields["status"] = status_value
+						wc_product_dirty = True
+
+				categories_value = wc_product_with_deserialised_fields.get("categories")
+				if isinstance(categories_value, str):
+					category_name = cstr(item.item.item_group).strip()
+					if category_name:
+						category_value = {"name": category_name, "slug": scrub(category_name)}
+						if categories_value != [category_value]:
+							wc_product_with_deserialised_fields["categories"] = [category_value]
+							wc_product_dirty = True
+
 				if wc_product_dirty:
 					# Re-serialize the WooCommerce Product's list and dict fields, because we deserialized earlier
 					woocommerce_product = woocommerce_product.serialize_attributes_of_type_dict_or_list(
