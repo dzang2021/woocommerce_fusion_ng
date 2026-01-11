@@ -290,26 +290,39 @@ class SynchroniseItem(SynchroniseWooCommerce):
 		"""
 		Update the ERPNext Item with fields from it's corresponding WooCommerce Product
 		"""
-		item_dirty = False
-		if item.item.item_name != woocommerce_product.woocommerce_name:
-			item.item.item_name = woocommerce_product.woocommerce_name
-			item_dirty = True
-
-		fields_updated, item.item = self.set_item_fields(item=item.item)
-
 		wc_server = frappe.get_cached_doc("WooCommerce Server", woocommerce_product.woocommerce_server)
-		if wc_server.enable_image_sync:
-			wc_product_images = json.loads(woocommerce_product.images)
-			if len(wc_product_images) > 0:
-				if item.item.image != wc_product_images[0]["src"]:
-					item.item.image = wc_product_images[0]["src"]
-					item_dirty = True
 
-		if item_dirty or fields_updated:
-			item.item.flags.created_by_sync = True
-			item.item.save()
+		for attempt in range(2):
+			item_dirty = False
+			if item.item.item_name != woocommerce_product.woocommerce_name:
+				item.item.item_name = woocommerce_product.woocommerce_name
+				item_dirty = True
 
-		self.set_sync_hash()
+			fields_updated, item.item = self.set_item_fields(item=item.item)
+
+			if wc_server.enable_image_sync:
+				wc_product_images = json.loads(woocommerce_product.images)
+				if len(wc_product_images) > 0:
+					if item.item.image != wc_product_images[0]["src"]:
+						item.item.image = wc_product_images[0]["src"]
+						item_dirty = True
+
+			if item_dirty or fields_updated:
+				item.item.flags.created_by_sync = True
+				try:
+					item.item.save()
+				except frappe.exceptions.TimestampMismatchError:
+					if attempt == 0:
+						frappe.log_error(
+							"WooCommerce Item Sync TimestampMismatch",
+							frappe.get_traceback(),
+						)
+						item.item = frappe.get_doc("Item", item.item.name)
+						continue
+					raise
+
+			self.set_sync_hash()
+			break
 
 	def update_woocommerce_product(
 		self, wc_product: WooCommerceProduct, item: ERPNextItemToSync
