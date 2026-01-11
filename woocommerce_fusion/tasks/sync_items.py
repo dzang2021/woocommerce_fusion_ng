@@ -8,6 +8,7 @@ from erpnext.stock.doctype.item.item import Item
 from frappe import ValidationError, _, _dict
 from frappe.query_builder import Criterion
 from frappe.utils import get_datetime, now
+from frappe.utils.data import cstr, scrub
 from jsonpath_ng.ext import parse
 
 from woocommerce_fusion.exceptions import SyncDisabledError
@@ -618,6 +619,18 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						if current_value != status_value:
 							wc_product_with_deserialised_fields["status"] = status_value
 							wc_product_dirty = True
+						continue
+					if (
+						map.woocommerce_field_name in ("$.categories", "categories")
+						and erpnext_item_field_name[0] == "item_group"
+					):
+						category_name = cstr(erpnext_item_field_value).strip()
+						if category_name:
+							category_value = {"name": category_name, "slug": scrub(category_name)}
+							current_value = wc_product_with_deserialised_fields.get("categories") or []
+							if current_value != [category_value]:
+								wc_product_with_deserialised_fields["categories"] = [category_value]
+								wc_product_dirty = True
 						continue
 					if map.woocommerce_field_name in ("$.status", "status") and not isinstance(
 						erpnext_item_field_value, str
