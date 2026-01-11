@@ -140,7 +140,10 @@ def sync_woocommerce_products_modified_since(date_time_from=None):
 			"WooCommerce Items Sync Task Error",
 			error_text,
 		)
-		raise ValueError(error_text)
+		date_time_from = now()
+		frappe.db.set_single_value(
+			"WooCommerce Integration Settings", "wc_last_sync_date_items", date_time_from
+		)
 
 	wc_products = get_list_of_wc_products(date_time_from=date_time_from)
 	for wc_product in wc_products:
