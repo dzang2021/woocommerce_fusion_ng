@@ -52,8 +52,10 @@ class WooCommerceServer(Document):
 			("item_code", "$.sku"),
 			("description", "$.description"),
 			("weight_per_unit", "$.weight"),
-			("custom_kurzbeschreibung", "$.short_description"),
-			("custom_produktsicherheitshinweise", "$.safety_instructions"),
+			("custom_kurzbeschreibung", "$.meta_data._mini_desc"),
+			("custom_inhaltsstoffe", "$.meta_data._ingredients"),
+			("custom_herstellerangaben", "$.meta_data._manufacturer_slug"),
+			("custom_produktsicherheitshinweise", "$.meta_data._safety_instructions"),
 		]
 
 		docfields = {field["fieldname"]: field.get("label") for field in self.get_item_docfields("Item")}

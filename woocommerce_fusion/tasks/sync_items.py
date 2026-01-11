@@ -50,6 +50,13 @@ def set_or_update_meta(meta_data, key, value):
 	return meta_data
 
 
+def get_meta_key_from_jsonpath(jsonpath: str) -> str | None:
+	prefix = "$.meta_data."
+	if jsonpath and jsonpath.startswith(prefix):
+		return jsonpath[len(prefix) :]
+	return None
+
+
 def run_item_sync_from_hook(doc, method):
 	"""
 	Intended to be triggered by a Document Controller hook from Item
@@ -539,19 +546,26 @@ class SynchroniseItem(SynchroniseWooCommerce):
 			wc_server = frappe.get_cached_doc(
 				"WooCommerce Server", self.woocommerce_product.woocommerce_server
 			)
-			if wc_server.item_field_map:
-				woocommerce_product_dict = (
-					self.woocommerce_product.deserialize_attributes_of_type_dict_or_list(
-						self.woocommerce_product.to_dict()
-					)
-				)
-				for map in wc_server.item_field_map:
-					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
-					if map.woocommerce_field_name == "$.safety_instructions":
-						value = get_meta_value(
-							woocommerce_product_dict.get("meta_data"), "_safety_instructions"
+				if wc_server.item_field_map:
+					woocommerce_product_dict = (
+						self.woocommerce_product.deserialize_attributes_of_type_dict_or_list(
+							self.woocommerce_product.to_dict()
 						)
-						if value:
+					)
+					for map in wc_server.item_field_map:
+						erpnext_item_field_name = map.erpnext_field_name.split(" | ")
+						meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
+						if meta_key:
+							value = get_meta_value(woocommerce_product_dict.get("meta_data"), meta_key)
+							if value is not None:
+								setattr(item, erpnext_item_field_name[0], value)
+								item_dirty = True
+							continue
+						if map.woocommerce_field_name == "$.safety_instructions":
+							value = get_meta_value(
+								woocommerce_product_dict.get("meta_data"), "_safety_instructions"
+							)
+							if value:
 							setattr(item, erpnext_item_field_name[0], value)
 							item_dirty = True
 						continue
@@ -590,6 +604,19 @@ class SynchroniseItem(SynchroniseWooCommerce):
 				for map in wc_server.item_field_map:
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
 					erpnext_item_field_value = getattr(item.item, erpnext_item_field_name[0])
+					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
+					if meta_key:
+						current_value = get_meta_value(
+							wc_product_with_deserialised_fields.get("meta_data"), meta_key
+						)
+						if erpnext_item_field_value != current_value:
+							wc_product_with_deserialised_fields["meta_data"] = set_or_update_meta(
+								wc_product_with_deserialised_fields.get("meta_data"),
+								meta_key,
+								erpnext_item_field_value,
+							)
+							wc_product_dirty = True
+						continue
 					if map.woocommerce_field_name == "$.safety_instructions":
 						current_value = get_meta_value(
 							wc_product_with_deserialised_fields.get("meta_data"),
