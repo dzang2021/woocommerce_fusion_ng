@@ -612,6 +612,13 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
+					if map.woocommerce_field_name in ("$.status", "status") and erpnext_item_field_name[0] == "disabled":
+						status_value = "draft" if erpnext_item_field_value else "publish"
+						current_value = wc_product_with_deserialised_fields.get("status")
+						if current_value != status_value:
+							wc_product_with_deserialised_fields["status"] = status_value
+							wc_product_dirty = True
+						continue
 					if map.woocommerce_field_name in ("$.status", "status") and not isinstance(
 						erpnext_item_field_value, str
 					):
