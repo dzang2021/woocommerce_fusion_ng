@@ -636,7 +636,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					woocommerce_product_field_matches = jsonpath_expr.find(wc_product_with_deserialised_fields)
 
 					if len(woocommerce_product_field_matches) == 0:
-						if map.woocommerce_field_name.startswith("$.images"):
+						if "images" in map.woocommerce_field_name:
 							frappe.logger("woocommerce_fusion").warning(
 								(
 									"Skipping missing WooCommerce field for item sync: "
