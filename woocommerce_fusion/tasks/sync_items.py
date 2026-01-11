@@ -307,19 +307,19 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						item.item.image = wc_product_images[0]["src"]
 						item_dirty = True
 
-			if item_dirty or fields_updated:
-				item.item.flags.created_by_sync = True
-				try:
-					item.item.save()
-				except frappe.exceptions.TimestampMismatchError:
-					if attempt == 0:
+				if item_dirty or fields_updated:
+					item.item.flags.created_by_sync = True
+					try:
+						item.item.save()
+					except frappe.exceptions.TimestampMismatchError:
+						if attempt == 0:
+							item.item = frappe.get_doc("Item", item.item.name)
+							continue
 						frappe.log_error(
 							"WooCommerce Item Sync TimestampMismatch",
 							frappe.get_traceback(),
 						)
-						item.item = frappe.get_doc("Item", item.item.name)
-						continue
-					raise
+						raise
 
 			self.set_sync_hash()
 			break
