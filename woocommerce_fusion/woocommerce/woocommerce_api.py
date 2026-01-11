@@ -338,8 +338,11 @@ class WooCommerceResource(Document):
 		record = self.before_db_update(record)
 
 		# Normalize types for common fields WooCommerce expects
-		if "status" in record and not isinstance(record["status"], str):
-			record["status"] = "draft" if record["status"] else "publish"
+		if "status" in record:
+			if not isinstance(record["status"], str):
+				record["status"] = "draft" if record["status"] else "publish"
+			if record["status"] not in {"draft", "publish", "pending", "private"}:
+				record.pop("status", None)
 
 		if "categories" in record:
 			categories_value = record["categories"]
@@ -352,7 +355,10 @@ class WooCommerceResource(Document):
 				categories_value = [{"name": entry, "slug": scrub(entry)} for entry in categories_value]
 			if isinstance(categories_value, str):
 				categories_value = [{"name": categories_value, "slug": scrub(categories_value)}]
-			record["categories"] = categories_value
+			if categories_value:
+				record["categories"] = categories_value
+			else:
+				record.pop("categories", None)
 
 		# Drop fields with values that are unchanged
 		record_data_before_save = self._doc_before_save.to_dict()
