@@ -39,9 +39,41 @@ class WooCommerceServer(Document):
 		if not self.secret:
 			self.secret = frappe.generate_hash()
 
+		self.ensure_default_item_field_map()
 		self.validate_so_status_map()
 		self.validate_item_map()
 		self.validate_reserved_stock_setting()
+
+	def ensure_default_item_field_map(self):
+		"""
+		Ensure base ERPNext <-> WooCommerce field mappings exist for common product info.
+		"""
+		default_mappings = [
+			("item_code", "$.sku"),
+			("description", "$.description"),
+			("weight_per_unit", "$.weight"),
+			("custom_kurzbeschreibung", "$.short_description"),
+			("custom_produktsicherheitshinweise", "$.safety_instructions"),
+		]
+
+		docfields = {field["fieldname"]: field.get("label") for field in self.get_item_docfields("Item")}
+		existing_fields = {
+			row.erpnext_field_name.split(" | ")[0] for row in (self.item_field_map or []) if row.erpnext_field_name
+		}
+
+		for erpnext_field, jsonpath in default_mappings:
+			if erpnext_field not in docfields:
+				continue
+			if erpnext_field in existing_fields:
+				continue
+			label = docfields[erpnext_field] or erpnext_field
+			self.append(
+				"item_field_map",
+				{
+					"erpnext_field_name": f"{erpnext_field} | {label}",
+					"woocommerce_field_name": jsonpath,
+				},
+			)
 
 	def validate_so_status_map(self):
 		"""
