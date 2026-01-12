@@ -347,6 +347,8 @@ class SynchroniseItem(SynchroniseWooCommerce):
 		Update the ERPNext Item with fields from it's corresponding WooCommerce Product
 		"""
 		wc_server = frappe.get_cached_doc("WooCommerce Server", woocommerce_product.woocommerce_server)
+		maintain_stock_original = item.item.is_stock_item
+		maintain_stock_retried = False
 
 		for attempt in range(2):
 			item_dirty = False
@@ -367,6 +369,13 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					item.item.flags.created_by_sync = True
 					try:
 						item.item.save()
+					except ValidationError as err:
+						if "Maintain Stock" in cstr(err) and not maintain_stock_retried:
+							maintain_stock_retried = True
+							item.item.is_stock_item = maintain_stock_original
+							item.item.save()
+						else:
+							raise
 					except frappe.exceptions.TimestampMismatchError:
 						if attempt == 0:
 							item.item = frappe.get_doc("Item", item.item.name)
