@@ -637,18 +637,18 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							wc_product_with_deserialised_fields["status"] = status_value
 							wc_product_dirty = True
 						continue
-					if (
-						woocommerce_field_name in ("$.categories", "categories")
-						and erpnext_item_field_name[0] == "item_group"
-					):
-						category_name = cstr(erpnext_item_field_value).strip()
-						if category_name:
-							category_value = {"name": category_name, "slug": scrub(category_name)}
-							current_value = wc_product_with_deserialised_fields.get("categories") or []
-							if current_value != [category_value]:
-								wc_product_with_deserialised_fields["categories"] = [category_value]
+						if (
+							woocommerce_field_name in ("$.categories", "categories")
+							and erpnext_item_field_name[0] == "item_group"
+						):
+							category_name = cstr(erpnext_item_field_value).strip()
+							if category_name:
+								category_value = {"name": category_name, "slug": scrub(category_name)}
+								current_value = wc_product_with_deserialised_fields.get("categories") or []
+								if current_value != [category_value]:
+									wc_product_with_deserialised_fields["categories"] = [category_value]
 									wc_product_dirty = True
-						continue
+							continue
 					if woocommerce_field_name in ("$.status", "status") and not isinstance(
 						erpnext_item_field_value, str
 					):
@@ -670,19 +670,19 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
-					meta_key = get_meta_key_from_jsonpath(woocommerce_field_name)
-					if meta_key:
-						current_value = get_meta_value(
-							wc_product_with_deserialised_fields.get("meta_data"), meta_key
-						)
-						if erpnext_item_field_value != current_value:
-							wc_product_with_deserialised_fields["meta_data"] = set_or_update_meta(
-								wc_product_with_deserialised_fields.get("meta_data"),
-								meta_key,
-								erpnext_item_field_value,
+						meta_key = get_meta_key_from_jsonpath(woocommerce_field_name)
+						if meta_key:
+							current_value = get_meta_value(
+								wc_product_with_deserialised_fields.get("meta_data"), meta_key
 							)
+							if erpnext_item_field_value != current_value:
+								wc_product_with_deserialised_fields["meta_data"] = set_or_update_meta(
+									wc_product_with_deserialised_fields.get("meta_data"),
+									meta_key,
+									erpnext_item_field_value,
+								)
 								wc_product_dirty = True
-						continue
+							continue
 					if woocommerce_field_name == "$.safety_instructions":
 						current_value = get_meta_value(
 							wc_product_with_deserialised_fields.get("meta_data"),
