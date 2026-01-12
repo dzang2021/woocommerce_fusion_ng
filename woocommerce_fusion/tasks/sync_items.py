@@ -696,6 +696,8 @@ class SynchroniseItem(SynchroniseWooCommerce):
 				)
 				for map in wc_server.item_field_map:
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
+					if erpnext_item_field_name[0] == "custom_herstellerangaben":
+						continue
 					if erpnext_item_field_name[0] == "is_stock_item":
 						continue
 					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
