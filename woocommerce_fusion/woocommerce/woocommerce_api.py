@@ -1,5 +1,5 @@
 import json
-from frappe.utils import scrub
+import frappe
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -352,9 +352,9 @@ class WooCommerceResource(Document):
 				except json.JSONDecodeError:
 					pass
 			if isinstance(categories_value, list) and categories_value and isinstance(categories_value[0], str):
-				categories_value = [{"name": entry, "slug": scrub(entry)} for entry in categories_value]
+				categories_value = [{"name": entry, "slug": frappe.scrub(entry)} for entry in categories_value]
 			if isinstance(categories_value, str):
-				categories_value = [{"name": categories_value, "slug": scrub(categories_value)}]
+				categories_value = [{"name": categories_value, "slug": frappe.scrub(categories_value)}]
 			if categories_value:
 				record["categories"] = categories_value
 			else:

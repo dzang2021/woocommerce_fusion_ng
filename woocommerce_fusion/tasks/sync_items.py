@@ -7,7 +7,7 @@ import frappe
 from erpnext.stock.doctype.item.item import Item
 from frappe import ValidationError, _, _dict
 from frappe.query_builder import Criterion
-from frappe.utils import get_datetime, now, scrub
+from frappe.utils import get_datetime, now
 from frappe.utils.data import cstr
 from jsonpath_ng.ext import parse
 
@@ -643,7 +643,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						):
 							category_name = cstr(erpnext_item_field_value).strip()
 							if category_name:
-								category_value = {"name": category_name, "slug": scrub(category_name)}
+							category_value = {"name": category_name, "slug": frappe.scrub(category_name)}
 								current_value = wc_product_with_deserialised_fields.get("categories") or []
 								if current_value != [category_value]:
 									wc_product_with_deserialised_fields["categories"] = [category_value]
