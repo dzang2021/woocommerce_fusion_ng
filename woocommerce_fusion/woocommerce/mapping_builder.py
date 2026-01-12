@@ -89,6 +89,8 @@ def get_woocommerce_product_fields(woocommerce_server: str, product_id: int) -> 
 def save_item_field_mappings(woocommerce_server: str, mappings: List[Dict]) -> None:
 	if not woocommerce_server:
 		frappe.throw(_("WooCommerce Server is required"))
+	if isinstance(mappings, str):
+		mappings = frappe.parse_json(mappings)
 	server = frappe.get_doc("WooCommerce Server", woocommerce_server)
 	server.set("item_field_map", [])
 
