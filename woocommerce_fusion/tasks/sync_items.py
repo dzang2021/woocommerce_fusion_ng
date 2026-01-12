@@ -92,6 +92,17 @@ def coerce_link_value(doc: Item, fieldname: str, value):
 	return value
 
 
+def extract_category_name(value):
+	if isinstance(value, list) and value:
+		value = value[0]
+	if isinstance(value, dict):
+		for key in ("name", "slug"):
+			if value.get(key):
+				return str(value.get(key))
+		return None
+	return str(value) if value else None
+
+
 def run_item_sync_from_hook(doc, method):
 	"""
 	Intended to be triggered by a Document Controller hook from Item
@@ -646,7 +657,19 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					if not woocommerce_product_field_matches:
 						continue
 
-					value = coerce_link_value(item, erpnext_item_field_name[0], woocommerce_product_field_matches[0].value)
+					value = woocommerce_product_field_matches[0].value
+					if erpnext_item_field_name[0] == "item_group":
+						value = extract_category_name(value)
+						if not value or not frappe.db.exists("Item Group", value):
+							frappe.logger("woocommerce_fusion").warning(
+								(
+									"Skipping unknown Item Group from WooCommerce: "
+									f"{value!r} (Item {item.name})"
+								)
+							)
+							continue
+
+					value = coerce_link_value(item, erpnext_item_field_name[0], value)
 					if value is None:
 						frappe.logger("woocommerce_fusion").warning(
 							(
