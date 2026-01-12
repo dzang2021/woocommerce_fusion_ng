@@ -843,6 +843,26 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							wc_product_with_deserialised_fields["regular_price"] = regular_price_value
 							wc_product_dirty = True
 						continue
+					if (
+						field_key == "custom_warenkorbbeschreibung"
+						and woocommerce_field_name in ("$.mini_desc", "mini_desc")
+					):
+						mini_desc_value = cstr(erpnext_item_field_value)
+						if wc_product_with_deserialised_fields.get("mini_desc") != mini_desc_value:
+							wc_product_with_deserialised_fields["mini_desc"] = mini_desc_value
+							wc_product_dirty = True
+						current_meta = get_meta_value(
+							wc_product_with_deserialised_fields.get("meta_data"),
+							"_mini_desc",
+						)
+						if mini_desc_value != current_meta:
+							wc_product_with_deserialised_fields["meta_data"] = set_or_update_meta(
+								wc_product_with_deserialised_fields.get("meta_data"),
+								"_mini_desc",
+								mini_desc_value,
+							)
+							wc_product_dirty = True
+						continue
 
 					if woocommerce_field_name in ("$.status", "status") and not isinstance(
 						erpnext_item_field_value, str
