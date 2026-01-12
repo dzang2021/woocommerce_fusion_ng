@@ -405,7 +405,19 @@ class WooCommerceResource(Document):
 		except Exception as err:
 			log_and_raise_error(err, error_text="db_update failed")
 		if response.status_code != 200:
-			log_and_raise_error(error_text="db_update failed", response=response)
+			if response.status_code == 400:
+				try:
+					error_payload = response.json()
+				except Exception:
+					error_payload = {}
+				if error_payload.get("code") == "product_invalid_sku":
+					unique_sku = (error_payload.get("data") or {}).get("unique_sku")
+					if unique_sku:
+						record["sku"] = unique_sku
+						self.sku = unique_sku
+						response = self.current_wc_api.api.put(endpoint, data=record)
+			if response.status_code != 200:
+				log_and_raise_error(error_text="db_update failed", response=response)
 
 		self.woocommerce_date_modified = response.json()["date_modified"]
 		self.after_db_update()
