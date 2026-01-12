@@ -8,6 +8,7 @@ from erpnext.stock.doctype.item.item import Item
 from frappe import ValidationError, _, _dict
 from frappe.query_builder import Criterion
 from frappe.utils import get_datetime, now
+from frappe.utils.data import get_url
 from frappe.utils.data import cstr
 from jsonpath_ng.ext import parse
 
@@ -110,10 +111,22 @@ def is_image_url(value: str) -> bool:
 	return lower_value.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"))
 
 
+def normalize_image_url(url: str) -> str | None:
+	if not url:
+		return None
+	if url.startswith("/"):
+		return get_url(url)
+	if url.startswith("http://") or url.startswith("https://"):
+		return url
+	return None
+
+
 def get_item_image_urls(item: Item) -> List[str]:
 	urls = []
 	if item.image:
-		urls.append(item.image)
+		normalized = normalize_image_url(item.image)
+		if normalized:
+			urls.append(normalized)
 
 	attachments = frappe.get_all(
 		"File",
@@ -131,7 +144,9 @@ def get_item_image_urls(item: Item) -> List[str]:
 			continue
 		if not is_image_url(entry.file_name or url):
 			continue
-		urls.append(url)
+		normalized = normalize_image_url(url)
+		if normalized:
+			urls.append(normalized)
 
 	seen = set()
 	unique_urls = []
