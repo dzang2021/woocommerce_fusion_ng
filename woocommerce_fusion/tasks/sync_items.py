@@ -138,6 +138,16 @@ def get_item_image_urls(item: Item) -> List[str]:
 		fields=["file_url", "file_name", "is_private"],
 		order_by="creation asc",
 	)
+	loose_attachments = frappe.get_all(
+		"File",
+		filters={
+			"attached_to_name": item.name,
+			"is_folder": 0,
+		},
+		fields=["file_url", "file_name", "is_private"],
+		order_by="creation asc",
+	)
+	attachments = list(attachments) + list(loose_attachments)
 	for entry in attachments:
 		url = entry.file_url or ""
 		if not url or entry.is_private or url.startswith("/private"):
