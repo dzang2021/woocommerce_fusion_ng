@@ -65,16 +65,30 @@ def coerce_link_value(doc: Item, fieldname: str, value):
 	if isinstance(value, dict):
 		for key in ("name", "slug"):
 			if value.get(key):
-				return str(value.get(key))
-		return None
+				value = str(value.get(key))
+				break
+		else:
+			return None
 	if isinstance(value, list) and value:
 		first = value[0]
 		if isinstance(first, dict):
 			for key in ("name", "slug"):
 				if first.get(key):
-					return str(first.get(key))
-			return None
-		return str(first)
+					value = str(first.get(key))
+					break
+			else:
+				return None
+		else:
+			value = str(first)
+	else:
+		value = str(value) if value is not None else None
+
+	if not value:
+		return None
+
+	if field.options and not frappe.db.exists(field.options, value):
+		return None
+
 	return value
 
 
