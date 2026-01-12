@@ -58,6 +58,20 @@ def get_meta_key_from_jsonpath(jsonpath: str) -> str | None:
 	return None
 
 
+def coerce_link_value(doc: Item, fieldname: str, value):
+	field = doc.meta.get_field(fieldname) if doc and fieldname else None
+	if not field or field.fieldtype != "Link":
+		return value
+	if isinstance(value, dict):
+		for key in ("name", "slug"):
+			if value.get(key):
+				return str(value.get(key))
+		return None
+	if isinstance(value, list) and value:
+		return str(value[0])
+	return value
+
+
 def run_item_sync_from_hook(doc, method):
 	"""
 	Intended to be triggered by a Document Controller hook from Item
@@ -575,6 +589,15 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					if meta_key:
 						value = get_meta_value(woocommerce_product_dict.get("meta_data"), meta_key)
 						if value is not None:
+							value = coerce_link_value(item, erpnext_item_field_name[0], value)
+							if value is None:
+								frappe.logger("woocommerce_fusion").warning(
+									(
+										"Skipping invalid Link value for item sync: "
+										f"{map.woocommerce_field_name} (Item {item.name})"
+									)
+								)
+								continue
 							setattr(item, erpnext_item_field_name[0], value)
 							item_dirty = True
 						continue
@@ -583,6 +606,15 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							woocommerce_product_dict.get("meta_data"), "_safety_instructions"
 						)
 						if value:
+							value = coerce_link_value(item, erpnext_item_field_name[0], value)
+							if value is None:
+								frappe.logger("woocommerce_fusion").warning(
+									(
+										"Skipping invalid Link value for item sync: "
+										f"{map.woocommerce_field_name} (Item {item.name})"
+									)
+								)
+								continue
 							setattr(item, erpnext_item_field_name[0], value)
 							item_dirty = True
 						continue
@@ -594,7 +626,16 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					if not woocommerce_product_field_matches:
 						continue
 
-					setattr(item, erpnext_item_field_name[0], woocommerce_product_field_matches[0].value)
+					value = coerce_link_value(item, erpnext_item_field_name[0], woocommerce_product_field_matches[0].value)
+					if value is None:
+						frappe.logger("woocommerce_fusion").warning(
+							(
+								"Skipping invalid Link value for item sync: "
+								f"{map.woocommerce_field_name} (Item {item.name})"
+							)
+						)
+						continue
+					setattr(item, erpnext_item_field_name[0], value)
 					item_dirty = True
 		return item_dirty, item
 
