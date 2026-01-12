@@ -94,10 +94,6 @@ class WooCommerceServer(Document):
 		"""
 		disallowed_fields = ["attributes"]
 
-		# If the built-in image sync is enabled, disallow the image field in the item field map to avoid unexpected behavior
-		if self.enable_image_sync:
-			disallowed_fields.extend(["images", "image"])
-
 		if self.item_field_map:
 			for map in self.item_field_map:
 				jsonpath_expr = map.woocommerce_field_name
@@ -113,13 +109,6 @@ class WooCommerceServer(Document):
 				for field in disallowed_fields:
 					if field in jsonpath_expr:
 						frappe.throw(_("Field '{0}' is not allowed in JSONPath expression").format(field))
-
-				if map.erpnext_field_name and map.erpnext_field_name.split(" | ")[0] == "image":
-					frappe.throw(
-						_(
-							"ERPNext field 'image' must not be mapped manually. Use 'Enable Image Sync' instead."
-						)
-					)
 
 				if jsonpath_expr in ("$.name", "name"):
 					frappe.throw(_("JSONPath '{0}' is not allowed for item field mapping").format(jsonpath_expr))

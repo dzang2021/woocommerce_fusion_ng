@@ -22,6 +22,12 @@ def get_woocommerce_servers() -> List[Dict]:
 def get_item_fields(woocommerce_server: str) -> List[Dict]:
 	server = frappe.get_doc("WooCommerce Server", woocommerce_server)
 	fields = server.get_item_docfields("Item")
+	fields.append(
+		{
+			"label": _("Item Price (Price List)"),
+			"fieldname": "item_price",
+		}
+	)
 	return sorted(fields, key=lambda field: (field.get("label") or "", field.get("fieldname") or ""))
 
 
@@ -68,6 +74,13 @@ def get_woocommerce_product_fields(woocommerce_server: str, product_id: int) -> 
 			{
 				"label": key,
 				"jsonpath": f"$.{key}",
+			}
+		)
+	if "images" in product:
+		fields.append(
+			{
+				"label": "images[0].src",
+				"jsonpath": "$.images[0].src",
 			}
 		)
 

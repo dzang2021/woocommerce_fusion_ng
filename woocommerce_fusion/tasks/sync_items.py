@@ -103,6 +103,46 @@ def extract_category_name(value):
 	return str(value) if value else None
 
 
+def is_image_url(value: str) -> bool:
+	if not value:
+		return False
+	lower_value = value.lower()
+	return lower_value.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"))
+
+
+def get_item_image_urls(item: Item) -> List[str]:
+	urls = []
+	if item.image:
+		urls.append(item.image)
+
+	attachments = frappe.get_all(
+		"File",
+		filters={
+			"attached_to_doctype": "Item",
+			"attached_to_name": item.name,
+			"is_folder": 0,
+		},
+		fields=["file_url", "file_name", "is_private"],
+		order_by="creation asc",
+	)
+	for entry in attachments:
+		url = entry.file_url or ""
+		if not url or entry.is_private or url.startswith("/private"):
+			continue
+		if not is_image_url(entry.file_name or url):
+			continue
+		urls.append(url)
+
+	seen = set()
+	unique_urls = []
+	for url in urls:
+		if url in seen:
+			continue
+		seen.add(url)
+		unique_urls.append(url)
+	return unique_urls
+
+
 def run_item_sync_from_hook(doc, method):
 	"""
 	Intended to be triggered by a Document Controller hook from Item
@@ -419,7 +459,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 		if isinstance(categories_value, str):
 			category_name = cstr(item.item.item_group).strip()
 			if category_name:
-				wc_product.categories = [{"name": category_name, "slug": scrub(category_name)}]
+				wc_product.categories = [{"name": category_name, "slug": frappe.scrub(category_name)}]
 				wc_product_dirty = True
 
 		if wc_product_dirty:
@@ -486,7 +526,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 			wc_product.woocommerce_name = item.item.item_name
 			wc_product.regular_price = get_item_price_rate(item) or "0"
 
-			self.set_product_fields(wc_product, item)
+			_, wc_product = self.set_product_fields(wc_product, item)
 
 			wc_product.insert()
 			self.woocommerce_product = wc_product
@@ -713,8 +753,15 @@ class SynchroniseItem(SynchroniseWooCommerce):
 
 				for map in wc_server.item_field_map:
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
-					erpnext_item_field_value = getattr(item.item, erpnext_item_field_name[0])
+					field_key = erpnext_item_field_name[0]
+					if field_key == "item_price":
+						erpnext_item_field_value = get_item_price_rate(item, force=True)
+					else:
+						erpnext_item_field_value = getattr(item.item, field_key)
 					woocommerce_field_name = map.woocommerce_field_name.strip() if map.woocommerce_field_name else ""
+
+					if field_key == "item_price" and erpnext_item_field_value is None:
+						continue
 
 					if woocommerce_field_name in ("$.name", "name"):
 						frappe.logger("woocommerce_fusion").warning(
@@ -735,7 +782,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 
 					if (
 						woocommerce_field_name in ("$.categories", "categories")
-						and erpnext_item_field_name[0] == "item_group"
+						and field_key == "item_group"
 					):
 						category_name = cstr(erpnext_item_field_value).strip()
 						if category_name:
@@ -744,6 +791,16 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							if current_value != [category_value]:
 								wc_product_with_deserialised_fields["categories"] = [category_value]
 								wc_product_dirty = True
+						continue
+
+					if (
+						field_key == "item_price"
+						and woocommerce_field_name in ("$.regular_price", "regular_price")
+					):
+						regular_price_value = cstr(erpnext_item_field_value)
+						if wc_product_with_deserialised_fields.get("regular_price") != regular_price_value:
+							wc_product_with_deserialised_fields["regular_price"] = regular_price_value
+							wc_product_dirty = True
 						continue
 
 					if woocommerce_field_name in ("$.status", "status") and not isinstance(
@@ -767,6 +824,16 @@ class SynchroniseItem(SynchroniseWooCommerce):
 								f"{erpnext_item_field_value!r} (Item {item.item.name})"
 							)
 						)
+						continue
+
+					if field_key == "image" and woocommerce_field_name.startswith("$.images"):
+						image_urls = get_item_image_urls(item.item)
+						if image_urls:
+							new_images = [{"src": url} for url in image_urls]
+							current_images = wc_product_with_deserialised_fields.get("images") or []
+							if current_images != new_images:
+								wc_product_with_deserialised_fields["images"] = new_images
+								wc_product_dirty = True
 						continue
 
 					meta_key = get_meta_key_from_jsonpath(woocommerce_field_name)
@@ -828,7 +895,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 				if isinstance(categories_value, str):
 					category_name = cstr(item.item.item_group).strip()
 					if category_name:
-						category_value = {"name": category_name, "slug": scrub(category_name)}
+						category_value = {"name": category_name, "slug": frappe.scrub(category_name)}
 						if categories_value != [category_value]:
 							wc_product_with_deserialised_fields["categories"] = [category_value]
 							wc_product_dirty = True
@@ -911,28 +978,30 @@ def get_list_of_wc_products(
 	return wc_products
 
 
-def get_item_price_rate(item: ERPNextItemToSync):
+def get_item_price_rate(item: ERPNextItemToSync, force: bool = False):
 	"""
-	Get the Item Price if Item Price sync is enabled
+	Get the Item Price if Item Price sync is enabled or force is true.
 	"""
-	# Check if the Item Price sync is enabled
 	wc_server = frappe.get_cached_doc(
 		"WooCommerce Server", item.item_woocommerce_server.woocommerce_server
 	)
-	if wc_server.enable_price_list_sync:
-		item_prices = frappe.get_all(
-			"Item Price",
-			filters={"item_code": item.item.item_name, "price_list": wc_server.price_list},
-			fields=["price_list_rate", "valid_upto"],
-		)
-		return next(
-			(
-				price.price_list_rate
-				for price in item_prices
-				if not price.valid_upto or price.valid_upto > now()
-			),
-			None,
-		)
+	if not (wc_server.enable_price_list_sync or force):
+		return None
+	if not wc_server.price_list:
+		return None
+	item_prices = frappe.get_all(
+		"Item Price",
+		filters={"item_code": item.item.item_code, "price_list": wc_server.price_list},
+		fields=["price_list_rate", "valid_upto"],
+	)
+	return next(
+		(
+			price.price_list_rate
+			for price in item_prices
+			if not price.valid_upto or price.valid_upto > now()
+		),
+		None,
+	)
 
 
 def clear_sync_hash_and_run_item_sync(item_code: str):
