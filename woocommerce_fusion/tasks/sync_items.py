@@ -104,6 +104,15 @@ def extract_category_name(value):
 	return str(value) if value else None
 
 
+def get_wc_mini_desc(product_dict: dict) -> str | None:
+	if not isinstance(product_dict, dict):
+		return None
+	mini_desc = product_dict.get("mini_desc")
+	if mini_desc:
+		return mini_desc
+	return get_meta_value(product_dict.get("meta_data"), "_mini_desc")
+
+
 def is_image_url(value: str) -> bool:
 	if not value:
 		return False
@@ -402,6 +411,17 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					self.item.item.modified
 				):
 					self.update_item(self.woocommerce_product, self.item)
+					woocommerce_product_dict = (
+						self.woocommerce_product.deserialize_attributes_of_type_dict_or_list(
+							self.woocommerce_product.to_dict()
+						)
+					)
+					erp_mini_desc = cstr(
+						getattr(self.item.item, "custom_warenkorbbeschreibung", "")
+					).strip()
+					wc_mini_desc = cstr(get_wc_mini_desc(woocommerce_product_dict) or "").strip()
+					if erp_mini_desc and erp_mini_desc != wc_mini_desc:
+						self.update_woocommerce_product(self.woocommerce_product, self.item)
 				if get_datetime(self.woocommerce_product.woocommerce_date_modified) < get_datetime(
 					self.item.item.modified
 				):
@@ -703,6 +723,8 @@ class SynchroniseItem(SynchroniseWooCommerce):
 				)
 				for map in wc_server.item_field_map:
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
+					if erpnext_item_field_name[0] == "custom_warenkorbbeschreibung":
+						continue
 					if erpnext_item_field_name[0] == "is_stock_item":
 						continue
 					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
