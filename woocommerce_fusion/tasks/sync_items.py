@@ -431,6 +431,9 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						item_dirty = True
 
 				if item_dirty or fields_updated:
+					if not item.item.custom_herstellerangaben and item.item.brand:
+						item.item.custom_herstellerangaben = item.item.brand
+						item_dirty = True
 					item.item.flags.created_by_sync = True
 					try:
 						item.item.save()
@@ -740,7 +743,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						continue
 
 					value = woocommerce_product_field_matches[0].value
-					if erpnext_item_field_name[0] == "custom_herstellerangaben":
+					if erpnext_item_field_name[0] in {"custom_herstellerangaben", "brand"}:
 						if isinstance(value, dict):
 							value = value.get("name") or value.get("slug")
 						if not value:
