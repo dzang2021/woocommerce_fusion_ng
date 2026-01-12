@@ -696,8 +696,6 @@ class SynchroniseItem(SynchroniseWooCommerce):
 				)
 				for map in wc_server.item_field_map:
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
-					if erpnext_item_field_name[0] == "custom_herstellerangaben":
-						continue
 					if erpnext_item_field_name[0] == "is_stock_item":
 						continue
 					meta_key = get_meta_key_from_jsonpath(map.woocommerce_field_name)
@@ -742,6 +740,11 @@ class SynchroniseItem(SynchroniseWooCommerce):
 						continue
 
 					value = woocommerce_product_field_matches[0].value
+					if erpnext_item_field_name[0] == "custom_herstellerangaben":
+						if isinstance(value, dict):
+							value = value.get("name") or value.get("slug")
+						if not value:
+							continue
 					if erpnext_item_field_name[0] == "item_group":
 						value = extract_category_name(value)
 						if not value or not frappe.db.exists("Item Group", value):
