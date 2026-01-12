@@ -435,9 +435,12 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					try:
 						item.item.save()
 					except ValidationError as err:
-						if (
-							item.item.is_stock_item != maintain_stock_original
-							and not maintain_stock_retried
+						error_text = cstr(err)
+						maintain_stock_error = (
+							"Maintain Stock" in error_text or "Lager verwalten" in error_text
+						)
+						if not maintain_stock_retried and (
+							item.item.is_stock_item != maintain_stock_original or maintain_stock_error
 						):
 							maintain_stock_retried = True
 							item.item.is_stock_item = maintain_stock_original
