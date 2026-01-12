@@ -622,6 +622,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 					erpnext_item_field_name = map.erpnext_field_name.split(" | ")
 					erpnext_item_field_value = getattr(item.item, erpnext_item_field_name[0])
 					woocommerce_field_name = map.woocommerce_field_name.strip() if map.woocommerce_field_name else ""
+
 					if woocommerce_field_name in ("$.name", "name"):
 						frappe.logger("woocommerce_fusion").warning(
 							(
@@ -630,6 +631,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
+
 					if woocommerce_field_name in ("$.status", "status") and erpnext_item_field_name[0] == "disabled":
 						status_value = "draft" if erpnext_item_field_value else "publish"
 						current_value = wc_product_with_deserialised_fields.get("status")
@@ -637,18 +639,20 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							wc_product_with_deserialised_fields["status"] = status_value
 							wc_product_dirty = True
 						continue
-						if (
-							woocommerce_field_name in ("$.categories", "categories")
-							and erpnext_item_field_name[0] == "item_group"
-						):
-							category_name = cstr(erpnext_item_field_value).strip()
-							if category_name:
+
+					if (
+						woocommerce_field_name in ("$.categories", "categories")
+						and erpnext_item_field_name[0] == "item_group"
+					):
+						category_name = cstr(erpnext_item_field_value).strip()
+						if category_name:
 							category_value = {"name": category_name, "slug": frappe.scrub(category_name)}
-								current_value = wc_product_with_deserialised_fields.get("categories") or []
-								if current_value != [category_value]:
-									wc_product_with_deserialised_fields["categories"] = [category_value]
-									wc_product_dirty = True
-							continue
+							current_value = wc_product_with_deserialised_fields.get("categories") or []
+							if current_value != [category_value]:
+								wc_product_with_deserialised_fields["categories"] = [category_value]
+								wc_product_dirty = True
+						continue
+
 					if woocommerce_field_name in ("$.status", "status") and not isinstance(
 						erpnext_item_field_value, str
 					):
@@ -659,6 +663,7 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
+
 					if woocommerce_field_name in ("$.categories", "categories") and not (
 						isinstance(erpnext_item_field_value, list)
 						and all(isinstance(entry, dict) for entry in erpnext_item_field_value)
@@ -670,19 +675,21 @@ class SynchroniseItem(SynchroniseWooCommerce):
 							)
 						)
 						continue
-						meta_key = get_meta_key_from_jsonpath(woocommerce_field_name)
-						if meta_key:
-							current_value = get_meta_value(
-								wc_product_with_deserialised_fields.get("meta_data"), meta_key
+
+					meta_key = get_meta_key_from_jsonpath(woocommerce_field_name)
+					if meta_key:
+						current_value = get_meta_value(
+							wc_product_with_deserialised_fields.get("meta_data"), meta_key
+						)
+						if erpnext_item_field_value != current_value:
+							wc_product_with_deserialised_fields["meta_data"] = set_or_update_meta(
+								wc_product_with_deserialised_fields.get("meta_data"),
+								meta_key,
+								erpnext_item_field_value,
 							)
-							if erpnext_item_field_value != current_value:
-								wc_product_with_deserialised_fields["meta_data"] = set_or_update_meta(
-									wc_product_with_deserialised_fields.get("meta_data"),
-									meta_key,
-									erpnext_item_field_value,
-								)
-								wc_product_dirty = True
-							continue
+							wc_product_dirty = True
+						continue
+
 					if woocommerce_field_name == "$.safety_instructions":
 						current_value = get_meta_value(
 							wc_product_with_deserialised_fields.get("meta_data"),
