@@ -68,7 +68,13 @@ def coerce_link_value(doc: Item, fieldname: str, value):
 				return str(value.get(key))
 		return None
 	if isinstance(value, list) and value:
-		return str(value[0])
+		first = value[0]
+		if isinstance(first, dict):
+			for key in ("name", "slug"):
+				if first.get(key):
+					return str(first.get(key))
+			return None
+		return str(first)
 	return value
 
 
