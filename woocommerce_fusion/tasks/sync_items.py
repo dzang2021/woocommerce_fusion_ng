@@ -423,6 +423,10 @@ class SynchroniseItem(SynchroniseWooCommerce):
 
 			fields_updated, item.item = self.set_item_fields(item=item.item)
 
+			if not item.item.custom_herstellerangaben and item.item.brand:
+				item.item.custom_herstellerangaben = item.item.brand
+				item_dirty = True
+
 			if wc_server.enable_image_sync:
 				wc_product_images = json.loads(woocommerce_product.images)
 				if len(wc_product_images) > 0:
