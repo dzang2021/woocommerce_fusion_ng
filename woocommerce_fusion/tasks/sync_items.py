@@ -7,8 +7,8 @@ import frappe
 from erpnext.stock.doctype.item.item import Item
 from frappe import ValidationError, _, _dict
 from frappe.query_builder import Criterion
-from frappe.utils import get_datetime, now
-from frappe.utils.data import cstr, scrub
+from frappe.utils import get_datetime, now, scrub
+from frappe.utils.data import cstr
 from jsonpath_ng.ext import parse
 
 from woocommerce_fusion.exceptions import SyncDisabledError

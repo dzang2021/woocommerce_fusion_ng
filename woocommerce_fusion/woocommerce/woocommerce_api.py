@@ -1,5 +1,5 @@
 import json
-from frappe.utils.data import scrub
+from frappe.utils import scrub
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
